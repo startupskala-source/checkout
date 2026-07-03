@@ -14,7 +14,7 @@ module.exports = async (req, res) => {
 
     const { nome, email, cpf } = req.body;
 
-    // Cria pagamento PIX
+    // Cria pagamento PIX direto
     const paymentData = {
       transaction_amount: 20.89,
       description: 'Método Turbo - Guia Completo',
@@ -22,6 +22,7 @@ module.exports = async (req, res) => {
       payer: {
         email: email || 'comprador@email.com',
         first_name: nome ? nome.split(' ')[0] : 'Comprador',
+        last_name: nome ? nome.split(' ').slice(1).join(' ') || 'Skala' : 'Skala',
         identification: {
           type: 'CPF',
           number: cpf || '00000000000'
@@ -35,7 +36,7 @@ module.exports = async (req, res) => {
         'Authorization': `Bearer ${ACCESS_TOKEN}`,
         'Content-Type': 'application/json',
         'X-Idempotency-Key': crypto.randomUUID(),
-        'X-Caller-Id': '3250900151',
+        'User-Agent': 'Mozilla/5.0 (compatible; SkalaPay/1.0)',
         'Accept': 'application/json'
       },
       body: JSON.stringify(paymentData)
@@ -44,7 +45,9 @@ module.exports = async (req, res) => {
     const result = await response.json();
 
     if (!response.ok) {
-      // Se falhou criar pagamento, cai no checkout Pro do Mercado Pago
+      // Fallback: redireciona pro checkout do Mercado Pago
+      // usando o link sandbox que força PIX
+      const pixLink = `https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=preference&purpose=wallet_purchase`;
       const prefResponse = await fetch('https://api.mercadopago.com/checkout/preferences', {
         method: 'POST',
         headers: {
@@ -65,18 +68,6 @@ module.exports = async (req, res) => {
             email: email || 'comprador@email.com',
             identification: { type: 'CPF', number: cpf || '00000000000' }
           },
-          payment_methods: {
-            excluded_payment_methods: [
-              { id: 'master' }, { id: 'visa' }, { id: 'amex' },
-              { id: 'hipercard' }, { id: 'elo' }, { id: 'diners' }
-            ],
-            excluded_payment_types: [
-              { id: 'ticket' }, { id: 'bank_transfer' },
-              { id: 'credit_card' }, { id: 'debit_card' }, { id: 'prepaid_card' }
-            ],
-            installments: 1,
-            default_installments: 1
-          },
           purpose: 'wallet_purchase',
           auto_return: 'approved',
           back_urls: {
@@ -94,14 +85,14 @@ module.exports = async (req, res) => {
       });
     }
 
-    // Pagamento PIX criado com sucesso
+    // Pagamento PIX criado com sucesso!
     const qr = result.point_of_interaction?.transaction_data;
     res.json({
       id: result.id,
       status: result.status,
       qr_code: qr?.qr_code,
       qr_code_base64: qr?.qr_code_base64,
-      init_point: qr?.ticket_url,
+      copia_cola: qr?.qr_code,
       public_key: process.env.MP_PUBLIC_KEY
     });
 
