@@ -14,7 +14,7 @@ module.exports = async (req, res) => {
 
     const { nome, email, cpf } = req.body;
 
-    // Cria PIX direto
+    // Cria pagamento PIX
     const paymentData = {
       transaction_amount: 20.89,
       description: 'Método Turbo - Guia Completo',
@@ -35,82 +35,73 @@ module.exports = async (req, res) => {
         'Authorization': `Bearer ${ACCESS_TOKEN}`,
         'Content-Type': 'application/json',
         'X-Idempotency-Key': crypto.randomUUID(),
-        'X-Caller-Id': '3250900151'
+        'X-Caller-Id': '3250900151',
+        'Accept': 'application/json'
       },
       body: JSON.stringify(paymentData)
     });
 
     const result = await response.json();
-    console.log('MP Response:', JSON.stringify(result).substring(0, 500));
 
     if (!response.ok) {
-      // Se bloqueou por IP, tenta pelo init_point
-      if (response.status === 401 || response.status === 403) {
-        // Fallback: cria preferência em vez de pagamento direto
-        const prefResponse = await fetch('https://api.mercadopago.com/checkout/preferences', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${ACCESS_TOKEN}`,
-            'Content-Type': 'application/json'
+      // Se falhou criar pagamento, cai no checkout Pro do Mercado Pago
+      const prefResponse = await fetch('https://api.mercadopago.com/checkout/preferences', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${ACCESS_TOKEN}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          items: [{
+            id: 'metodo-turbo-1',
+            title: 'Método Turbo',
+            description: 'Guia Completo + 2 Bônus',
+            quantity: 1,
+            currency_id: 'BRL',
+            unit_price: 20.89
+          }],
+          payer: {
+            name: nome || 'Comprador',
+            email: email || 'comprador@email.com',
+            identification: { type: 'CPF', number: cpf || '00000000000' }
           },
-          body: JSON.stringify({
-            items: [
-              {
-                id: 'metodo-turbo-1',
-                title: 'Método Turbo',
-                description: 'Guia Completo + 2 Bônus',
-                quantity: 1,
-                currency_id: 'BRL',
-                unit_price: 20.89
-              }
+          payment_methods: {
+            excluded_payment_methods: [
+              { id: 'master' }, { id: 'visa' }, { id: 'amex' },
+              { id: 'hipercard' }, { id: 'elo' }, { id: 'diners' }
             ],
-            payer: {
-              name: nome || 'Comprador',
-              email: email || 'comprador@email.com',
-              identification: {
-                type: 'CPF',
-                number: cpf || '00000000000'
-              }
-            },
-            payment_methods: {
-              excluded_payment_methods: [
-                { id: 'master' }, { id: 'visa' }, { id: 'amex' },
-                { id: 'hipercard' }, { id: 'elo' }, { id: 'diners' }
-              ],
-              excluded_payment_types: [
-                { id: 'ticket' }, { id: 'bank_transfer' },
-                { id: 'credit_card' }, { id: 'debit_card' }, { id: 'prepaid_card' }
-              ],
-              installments: 1,
-              default_installments: 1
-            },
-            purpose: 'wallet_purchase',
-            auto_return: 'approved',
-            back_urls: {
-              success: 'https://startupskala-source.github.io/checkout/',
-              failure: 'https://startupskala-source.github.io/checkout/',
-              pending: 'https://startupskala-source.github.io/checkout/'
-            }
-          })
-        });
-        const pref = await prefResponse.json();
-        return res.json({
-          init_point: pref.init_point,
-          preference_id: pref.id,
-          public_key: process.env.MP_PUBLIC_KEY
-        });
-      }
-
-      return res.status(response.status).json({ error: result.message || 'Erro Mercado Pago' });
+            excluded_payment_types: [
+              { id: 'ticket' }, { id: 'bank_transfer' },
+              { id: 'credit_card' }, { id: 'debit_card' }, { id: 'prepaid_card' }
+            ],
+            installments: 1,
+            default_installments: 1
+          },
+          purpose: 'wallet_purchase',
+          auto_return: 'approved',
+          back_urls: {
+            success: 'https://startupskala-source.github.io/checkout/',
+            failure: 'https://startupskala-source.github.io/checkout/',
+            pending: 'https://startupskala-source.github.io/checkout/'
+          }
+        })
+      });
+      const pref = await prefResponse.json();
+      return res.json({
+        init_point: pref.init_point,
+        preference_id: pref.id,
+        public_key: process.env.MP_PUBLIC_KEY
+      });
     }
 
     // Pagamento PIX criado com sucesso
+    const qr = result.point_of_interaction?.transaction_data;
     res.json({
       id: result.id,
       status: result.status,
-      qr_code: result.point_of_interaction?.transaction_data?.qr_code,
-      qr_code_base64: result.point_of_interaction?.transaction_data?.qr_code_base64,
-      init_point: result.point_of_interaction?.transaction_data?.ticket_url,
+      qr_code: qr?.qr_code,
+      qr_code_base64: qr?.qr_code_base64,
+      init_point: qr?.ticket_url,
       public_key: process.env.MP_PUBLIC_KEY
     });
 
