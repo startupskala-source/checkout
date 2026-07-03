@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Checkout - SkalaPay</title>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-body: #fff0f3; /* Fundo rosa bem clarinho */
+      --bg-white: #ffffff;
+      --top-bar-bg: linear-gradient(135deg, #ffb7c5 0%, #ff9aae 100%);
+      --accent-color: #ff8099; 
+      --baby-blue: #d4f0ff; 
+      --text-main: #4a4a4a; /* Cinza escuro suave */
+      --text-gray: #7a7a7a;
+      --border-color: #ffd1da; /* Borda rosa pastel */
+      --font: 'Nunito', sans-serif;
+
+      /* Cores SkalaPay */
+      --skala-blue: #7baed9;
+      --skala-orange: #ff9aae;
+    }
+
+    body {
+      font-family: var(--font);
+      background-color: var(--bg-body);
+      /* Estampa de bolinhas (Poá) super delicada */
+      background-image: radial-gradient(#ffe0e6 2px, transparent 2px);
+      background-size: 30px 30px;
+      color: var(--text-main);
+      -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* BARRA DE ESCASSEZ VERMELHA NO TOPO */
+    .scarcity-bar {
+      position: relative;
+      overflow: hidden;
+      background: #d40000;
+      color: white;
+      text-align: center;
+      padding: 12px 16px;
+      font-size: 15px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      isolation: isolate;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.2), 0 4px 12px rgba(200,0,0,0.3);
+      width: 100%;
+      z-index: 50;
+    }
+    .scarcity-bar::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(105deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.06) 30%, transparent 55%);
+      z-index: 0;
+      pointer-events: none;
+    }
+    .scarcity-bar::after {
+      content: '';
+      position: absolute;
+      top: -10%;
+      left: -80%;
+      width: 50%;
+      height: 120%;
+      background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.30) 35%, rgba(255,255,255,0.50) 50%, rgba(255,255,255,0.30) 65%, transparent 100%);
+      z-index: 0;
+      pointer-events: none;
+      animation: slideShineMain 2.8s cubic-bezier(0.45, 0, 0.15, 1) infinite;
+    }
+    @keyframes slideShineMain {
+      0%   { left: -80%; opacity: 0; }
+      10%  { opacity: 1; }
+      90%  { opacity: 1; }
+      100% { left: 160%; opacity: 0; }
+    }
+    .scarcity-bar svg { width: 22px; height: 22px; fill: white; position: relative; z-index: 1; }
+    .scarcity-bar .time {
+      font-size: 18px;
+      font-weight: 800;
+      min-width: 48px;
+      text-align: left;
+      position: relative;
+      z-index: 1;
+      background: rgba(0, 0, 0, 0.2);
+      padding: 2px 8px;
+      border-radius: 4px;
+      letter-spacing: 1px;
+    }
+    .scarcity-bar > span { position: relative; z-index: 1; text-shadow: 0 1px 2px rgba(0,0,0,0.3); }
+
+    /* BARRA DE BÔNUS (EFEITO VIDRO + ROSA FORTE) */
+    .top-bar-baby {
+      position: relative;
+      background: rgba(255, 87, 138, 0.85); 
+      backdrop-filter: blur(12px); 
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.5); 
+      box-shadow: 0 12px 28px rgba(255, 87, 138, 0.35), inset 0 2px 5px rgba(255, 255, 255, 0.4);
+      
+      color: #ffffff;
+      text-align: center;
+      padding: 16px 12px;
+      font-size: 15px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      border-radius: 16px;
+      margin: 16px 0 8px 0;
+    }
+    .top-bar-baby > span {
+      position: relative;
+      z-index: 1;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.15);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .float-emoji {
+      display: inline-block;
+      animation: float 3s ease-in-out infinite;
+    }
+    @keyframes float {
+      0% { transform: translateY(0px); }
+      50% { transform: translateY(-4px); }
+      100% { transform: translateY(0px); }
+    }
+
+    /* BANNER RESPONSIVO */
+    .banner-topo {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      padding: 20px 16px 0 16px;
+    }
+    .banner-topo img {
+      width: 100%;
+      max-width: 1000px;
+      height: auto;
+      display: block;
+      border-radius: 20px;
+      box-shadow: 0 8px 24px rgba(255, 154, 174, 0.15);
+      border: 4px solid #fff;
+    }
+
+    /* CONTAINER PRINCIPAL */
+    .container {
+      max-width: 1000px;
+      margin: 32px auto 24px auto;
+      padding: 0 16px;
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      gap: 32px;
+      align-items: start;
+    }
+
+    .card-baby {
+      background: var(--bg-white);
+      border-radius: 24px; 
+      padding: 32px;
+      box-shadow: 0 8px 24px rgba(255, 183, 197, 0.15);
+      border: 2px dashed var(--border-color);
+      position: relative;
+    }
+    
+    .card-baby::before {
+      content: '🍼';
+      position: absolute;
+      top: -24px;
+      right: 32px;
+      width: 48px;
+      height: 48px;
+      background: #ffffff;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px;
+      box-shadow: 0 4px 12px rgba(255, 183, 197, 0.5);
+      z-index: 10;
+    }
+
+    .header-product h1 {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--accent-color);
+      margin-bottom: 4px;
+    }
+    .header-product p {
+      font-size: 15px;
+      color: var(--text-gray);
+      font-weight: 600;
+    }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 18px;
+      font-weight: 800;
+      margin: 32px 0 16px;
+      color: var(--accent-color);
+    }
+
+    /* FORMULÁRIO */
+    .form-group { margin-bottom: 16px; }
+    .form-group label {
+      display: block;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-gray);
+      margin-bottom: 6px;
+    }
+    .form-control {
+      width: 100%;
+      padding: 14px 16px;
+      border: 2px solid #fff0f3;
+      border-radius: 12px;
+      font-size: 15px;
+      font-family: var(--font);
+      font-weight: 600;
+      color: var(--text-main);
+      outline: none;
+      transition: all 0.2s;
+      background-color: #fcfdfe;
+    }
+    .form-control::placeholder { color: #d0d0d0; font-weight: 500; }
+    .form-control:focus { 
+      border-color: var(--accent-color); 
+      background-color: #fff;
+      box-shadow: 0 0 0 4px rgba(255, 128, 153, 0.1);
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .phone-input-group {
+      display: flex;
+      border: 2px solid #fff0f3;
+      border-radius: 12px;
+      overflow: hidden;
+      background-color: #fcfdfe;
+      transition: all 0.2s;
+    }
+    .phone-input-group:focus-within {
+      border-color: var(--accent-color);
+      background-color: #fff;
+      box-shadow: 0 0 0 4px rgba(255, 128, 153, 0.1);
+    }
+    .phone-input-group .flag {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0 12px;
+      background: #fff0f3;
+      font-size: 14px;
+      color: var(--text-main);
+      font-weight: 700;
+    }
+    .phone-input-group input {
+      flex: 1;
+      border: none;
+      padding: 14px 16px;
+      font-size: 15px;
+      font-weight: 600;
+      outline: none;
+      background: transparent;
+      color: var(--text-main);
+    }
+    .link-help {
+      display: inline-block;
+      font-size: 12px;
+      color: #92bce0;
+      text-decoration: none;
+      margin-top: -6px;
+      margin-bottom: 10px;
+      font-weight: 700;
+      transition: color 0.2s;
+    }
+    .link-help:hover { color: var(--accent-color); }
+
+    /* MÉTODOS DE PAGAMENTO */
+    .payment-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .pay-btn {
+      border: 2px solid #fff0f3;
+      background: var(--bg-white);
+      border-radius: 16px;
+      padding: 20px 12px;
+      min-height: 90px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-gray);
+      transition: all 0.2s ease;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .pay-btn svg {
+      transition: transform 0.2s ease;
+      opacity: 0.8;
+    }
+    .pay-btn:hover {
+      border-color: var(--accent-color);
+      color: var(--accent-color);
+    }
+    .pay-btn.active {
+      background: #fffafa;
+      border-color: var(--accent-color);
+      color: var(--accent-color);
+      box-shadow: 0 4px 16px rgba(255, 128, 153, 0.15);
+    }
+    .pay-btn.active svg {
+      transform: scale(1.1);
+      opacity: 1;
+    }
+
+    /* PARCELAS */
+    .installments-wrapper { margin-bottom: 32px; }
+    .installments-label {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-gray);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .badge-novo {
+      background: var(--baby-blue);
+      color: #3b7494;
+      font-size: 10px;
+      font-weight: 800;
+      padding: 3px 8px;
+      border-radius: 8px;
+    }
+    .select-wrapper { position: relative; }
+    .select-wrapper select {
+      width: 100%;
+      padding: 14px 16px;
+      border: 2px solid #fff0f3;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 700;
+      font-family: var(--font);
+      color: var(--text-main);
+      appearance: none;
+      background: #fcfdfe;
+      outline: none;
+      cursor: pointer;
+    }
+    .select-wrapper::after {
+      content: '▼';
+      font-size: 10px;
+      position: absolute;
+      right: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      pointer-events: none;
+      color: var(--accent-color);
+    }
+
+    /* RESUMO DO PEDIDO */
+    .resumo-title {
+      font-size: 16px;
+      font-weight: 800;
+      margin-bottom: 12px;
+      color: var(--accent-color);
+    }
+    .receipt-box {
+      background: #fffafa;
+      border: 2px dashed #ffe0e6;
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 24px;
+    }
+    .receipt-line {
+      display: flex;
+      justify-content: space-between;
+      font-size: 14px;
+      color: var(--text-gray);
+      margin-bottom: 12px;
+      font-weight: 600;
+    }
+    .receipt-line.main {
+      color: var(--text-main);
+      font-weight: 800;
+    }
+    .receipt-line.total {
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 2px dotted #ffe0e6;
+      font-weight: 800;
+      color: var(--accent-color);
+      font-size: 18px;
+      margin-bottom: 0;
+    }
+
+    /* BOTÃO PRINCIPAL (VERDE COM EFEITO VIDRO) */
+    .btn-submit {
+      position: relative;
+      overflow: hidden;
+      isolation: isolate;
+      width: 100%;
+      background: rgba(30, 185, 90, 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.5);
+      box-shadow: 0 12px 28px rgba(30, 185, 90, 0.35), inset 0 2px 5px rgba(255, 255, 255, 0.4);
+      color: white;
+      padding: 18px;
+      border-radius: 16px;
+      font-size: 18px;
+      font-weight: 800;
+      font-family: var(--font);
+      cursor: pointer;
+      margin-top: 8px;
+      transition: all 0.2s ease;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.15);
+    }
+    
+    .btn-submit::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -60%;
+      width: 45%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.2) 40%, rgba(255,255,255,0.4) 50%, rgba(255,255,255,0.2) 60%, transparent 100%);
+      z-index: 0;
+      pointer-events: none;
+      animation: btnShine 3.2s ease-in-out infinite;
+    }
+    @keyframes btnShine {
+      0%   { left: -60%; opacity: 0; }
+      12%  { opacity: 1; }
+      88%  { opacity: 1; }
+      100% { left: 160%; opacity: 0; }
+    }
+    
+    .btn-submit:hover {
+      background: rgba(30, 185, 90, 0.95);
+      transform: translateY(-2px);
+      box-shadow: 0 14px 32px rgba(30, 185, 90, 0.45), inset 0 2px 5px rgba(255, 255, 255, 0.5);
+    }
+    .btn-submit:active { transform: scale(0.97); }
+
+    /* FOOTER DO FORMULÁRIO */
+    .form-footer {
+      text-align: center;
+      margin-top: 32px;
+    }
+    .brand-logo {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      font-weight: 900;
+      letter-spacing: -0.5px;
+      margin-bottom: 8px;
+    }
+    .brand-logo .skala { color: var(--skala-blue); }
+    .brand-logo .pay { color: var(--skala-orange); }
+
+    .form-footer p {
+      font-size: 12px;
+      color: var(--text-gray);
+      margin-bottom: 12px;
+      font-weight: 600;
+    }
+    .safe-buy {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      color: #1eb95a;
+      font-weight: 800;
+    }
+
+    /* COLUNA DIREITA (SIDEBAR) */
+    .sidebar-card {
+      background: var(--bg-white);
+      border-radius: 24px;
+      box-shadow: 0 8px 24px rgba(255, 183, 197, 0.15);
+      border: 2px dashed var(--border-color);
+      position: relative;
+    }
+    
+    .sidebar-card::before {
+      content: '🧸';
+      position: absolute;
+      top: -24px;
+      right: 32px;
+      width: 48px;
+      height: 48px;
+      background: #ffffff;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px;
+      box-shadow: 0 4px 12px rgba(255, 183, 197, 0.5);
+      z-index: 10;
+    }
+    
+    .sidebar-header {
+      background: var(--top-bar-bg);
+      color: white;
+      text-align: center;
+      padding: 20px;
+      font-size: 16px;
+      font-weight: 800;
+      border-radius: 22px 22px 0 0;
+    }
+    .sidebar-content { padding: 24px; }
+    .sidebar-content h3 {
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--accent-color);
+      margin-bottom: 8px;
+    }
+    .sidebar-content p {
+      font-size: 13px;
+      color: var(--text-gray);
+      margin-bottom: 4px;
+      font-weight: 600;
+    }
+    .sidebar-content a {
+      font-size: 13px;
+      color: #92bce0;
+      text-decoration: underline;
+      font-weight: 700;
+    }
+
+    .divider {
+      height: 1px;
+      background: none;
+      border-top: 2px dotted #ffe0e6;
+      margin: 24px 0;
+    }
+
+    .sidebar-legal {
+      text-align: center;
+      font-size: 11px;
+      color: #a0a0a0;
+      line-height: 1.6;
+      font-weight: 600;
+    }
+    .sidebar-legal .brand-logo {
+      font-size: 20px;
+      margin-bottom: 8px;
+    }
+    .sidebar-legal a { color: #a0a0a0; text-decoration: underline; }
+
+    @media (max-width: 860px) {
+      .container { grid-template-columns: 1fr; }
+      .sidebar-card { display: none; }
+    }
+    @media (max-width: 500px) {
+      .grid-2 { grid-template-columns: 1fr; }
+      .payment-grid { grid-template-columns: 1fr 1fr; }
+      .card-baby { padding: 32px 16px 24px 16px; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="scarcity-bar">
+    <svg viewBox="0 0 24 24">
+      <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/>
+    </svg>
+    <span>ATENÇÃO! OFERTA ENCERRA EM:</span>
+    <span class="time" id="countdownTimer">15:00</span>
+  </div>
+
+  <div class="banner-topo">
+    <img src="Gemini_Generated_Image_5cw1xi5cw1xi5cw1.png" alt="Oferta Completa: Guia Principal + 2 Bônus">
+  </div>
+
+  <div class="container">
+
+    <main class="card-baby">
+
+      <div class="header-product">
+        <h1>Método Turbo</h1>
+        <p>R$ 19,90 à vista</p>
+      </div>
+
+      <div class="section-title">
+        🧸 Seus dados
+      </div>
+
+      <div class="form-group">
+        <label>Nome completo da Mamãe (ou Papai)</label>
+        <input type="text" class="form-control" placeholder="Preencha seu nome">
+      </div>
+
+      <div class="form-group">
+        <label>E-mail para receber o acesso</label>
+        <input type="email" class="form-control" placeholder="Preencha seu melhor e-mail">
+      </div>
+
+      <div class="grid-2">
+        <div class="form-group" style="margin-bottom:4px;">
+          <label>CPF</label>
+          <input type="text" class="form-control" placeholder="Apenas números">
+        </div>
+        <div class="form-group" style="margin-bottom:4px;">
+          <label>Celular / WhatsApp</label>
+          <div class="phone-input-group">
+            <div class="flag">
+              <img src="https://flagcdn.com/w20/br.png" width="20" alt="Bandeira do Brasil" style="border-radius:2px;">
+              +55
+            </div>
+            <input type="tel" placeholder="(00) 00000-0000">
+          </div>
+        </div>
+      </div>
+
+      <a href="#" class="link-help">Por que pedimos esses dados?</a>
+
+      <div class="top-bar-baby">
+        <span><span class="float-emoji">🎁</span> PAGUE AGORA E GANHE + 2 BÔNUS PARA O SEU BEBÊ <span class="float-emoji">👶</span></span>
+      </div>
+
+      <div class="section-title">
+        Forma de Pagamento
+      </div>
+
+      <div class="payment-grid" id="paymentMethods">
+        <div class="pay-btn active" data-method="pix">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" style="height:32px; width:auto; fill:#32bcad;">
+            <path d="M119.2 384.2l-87-87c-17.6-17.6-17.6-46.1 0-63.7l87-87c17.6-17.6 46.1-17.6 63.7 0l43.5 43.5-43.5 43.5-27.6-27.6c-8.8-8.8-23.1-8.8-31.8 0l-55.2 55.2c-8.8 8.8-8.8 23.1 0 31.8l55.2 55.2c8.8 8.8 23.1 8.8 31.8 0l87-87 43.5 43.5-103 103.1c-17.5 17.5-46 17.5-63.6-.1z"/>
+            <path d="M392.8 127.8l87 87c17.6 17.6 17.6 46.1 0 63.7l-87 87c-17.6 17.6-46.1 17.6-63.7 0l-43.5-43.5 43.5-43.5 27.6 27.6c8.8 8.8 23.1 8.8 31.8 0l55.2-55.2c8.8-8.8 8.8-23.1 0-31.8l-55.2-55.2c-8.8-8.8-23.1-8.8-31.8 0l-87 87-43.5-43.5 103-103.1c17.6-17.6 46.1-17.6 63.6.1z"/>
+          </svg>
+          PIX
+        </div>
+        
+        <div class="pay-btn" data-method="card">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" style="height:28px; width:auto; fill:#ff8099;">
+            <path d="M448 80H64C28.7 80 0 108.7 0 144v224c0 35.3 28.7 64 64 64h384c35.3 0 64-28.7 64-64V144c0-35.3-28.7-64-64-64zM64 128h384c8.8 0 16 7.2 16 16v32H48v-32c0-8.8 7.2-16 16-16zm384 256H64c-8.8 0-16-7.2-16-16v-96h416v96c0 8.8-7.2 16-16 16z"/>
+          </svg>
+          Cartão de Crédito
+        </div>
+      </div>
+
+      <div class="installments-wrapper" id="installmentsBox" style="display:none;">
+        <label class="installments-label">
+          Parcelas <span class="badge-novo">NOVO</span>
+        </label>
+        <div class="select-wrapper">
+          <select>
+            <option>4x de R$ 5,57</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="resumo-title">🤱 Resumo do pedido</div>
+
+      <div class="receipt-box">
+        <div class="receipt-line main">
+          <span>Método Turbo</span>
+          <span>R$ 19,90</span>
+        </div>
+        <div class="receipt-line">
+          <span>Taxa de serviço</span>
+          <span>R$ 0,99</span>
+        </div>
+        <div class="receipt-line total">
+          <span>Total</span>
+          <span>R$ 20,89</span>
+        </div>
+      </div>
+
+      <button class="btn-submit" id="btnPay">Gerar meu PIX Seguro</button>
+
+      <div class="form-footer">
+        <div class="brand-logo">
+          <span class="skala">SKALA</span><span class="pay">PAY</span>
+        </div>
+        <p>A SkalaPay protege o seu pagamento para o vendedor <strong>Sidnei Ceo</strong></p>
+        <div class="safe-buy">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#1eb95a"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+          Compra 100% segura para você e seu bebê
+        </div>
+      </div>
+
+    </main>
+
+    <aside class="sidebar-card">
+      <div class="sidebar-header">
+        Compra Protegida 🔒
+      </div>
+
+      <div class="sidebar-content">
+        <h3>Método Turbo 🍼</h3>
+        <p>Precisa de ajuda com o pedido?</p>
+        <a href="#">Fale com o suporte</a>
+
+        <hr class="divider">
+
+        <div class="sidebar-legal">
+          <div class="brand-logo">
+            <span class="skala">SKALA</span><span class="pay">PAY</span>
+          </div>
+          <p>Ambiente seguro e certificado<br>Sidnei Ceo</p>
+          <p>Este site é protegido pelo reCAPTCHA do Google<br>
+            <a href="#">Política de privacidade</a> | <a href="#">Termos de serviço</a>
+          </p>
+          <p>* Parcelamento com acréscimo da operadora<br>
+            Ao continuar, você concorda com os <a href="#">Termos de Compra</a>
+          </p>
+        </div>
+
+      </div>
+    </aside>
+
+  </div>
+
+</body>
+<script>
+  (function startTimer() {
+    let time = 15 * 60;
+    const timerEl = document.getElementById('countdownTimer');
+    
+    const interval = setInterval(() => {
+      const minutes = Math.floor(time / 60).toString().padStart(2, '0');
+      const seconds = (time % 60).toString().padStart(2, '0');
+      
+      timerEl.textContent = `${minutes}:${seconds}`;
+      
+      if(time > 0) {
+        time--;
+      } else {
+        clearInterval(interval);
+      }
+    }, 1000);
+  })();
+
+  (function togglePayment() {
+    const methods = document.querySelectorAll('.pay-btn');
+    const installments = document.getElementById('installmentsBox');
+    const btn = document.getElementById('btnPay');
+
+    methods.forEach(btnEl => {
+      btnEl.addEventListener('click', function() {
+        methods.forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+
+        const method = this.dataset.method;
+        if (method === 'pix') {
+          installments.style.display = 'none';
+          btn.textContent = 'Gerar meu PIX Seguro';
+        } else {
+          installments.style.display = 'block';
+          btn.textContent = 'Pagar com Cartão';
+        }
+      });
+    });
+  })();
+</script>
+</html>
