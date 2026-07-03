@@ -1,4 +1,4 @@
-const mercadopago = require('mercadopago');
+const { MercadoPagoConfig, Payment } = require('mercadopago');
 
 module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -10,21 +10,20 @@ module.exports = async (req, res) => {
 
   try {
     const ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN;
-    if (!ACCESS_TOKEN) {
-      return res.status(500).json({ error: 'ACCESS_TOKEN não configurado' });
-    }
+    if (!ACCESS_TOKEN) return res.status(500).json({ error: 'ACCESS_TOKEN não configurado' });
 
-    mercadopago.configurations.setAccessToken(ACCESS_TOKEN);
+    const client = new MercadoPagoConfig({ accessToken: ACCESS_TOKEN });
+    const payment = new Payment(client);
 
     const { id } = req.query;
     if (!id) return res.status(400).json({ error: 'ID do pagamento é obrigatório' });
 
-    const payment = await mercadopago.payment.get(id);
+    const result = await payment.get({ id });
 
     res.json({
-      id: payment.body.id,
-      status: payment.body.status,
-      status_detail: payment.body.status_detail,
+      id: result.id,
+      status: result.status,
+      status_detail: result.status_detail,
     });
 
   } catch (error) {

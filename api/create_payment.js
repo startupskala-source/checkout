@@ -1,8 +1,7 @@
-const mercadopago = require('mercadopago');
+const { MercadoPagoConfig, Payment } = require('mercadopago');
 const crypto = require('crypto');
 
 module.exports = async (req, res) => {
-  // Habilitar CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -18,11 +17,12 @@ module.exports = async (req, res) => {
       return res.status(500).json({ error: 'ACCESS_TOKEN não configurado' });
     }
 
-    mercadopago.configurations.setAccessToken(ACCESS_TOKEN);
+    const client = new MercadoPagoConfig({ accessToken: ACCESS_TOKEN });
+    const payment = new Payment(client);
 
-    const { nome, email, cpf, telefone } = req.body;
+    const { nome, email, cpf } = req.body;
 
-    const payment_data = {
+    const paymentData = {
       transaction_amount: 20.89,
       description: 'Método Turbo - Guia Completo',
       payment_method_id: 'pix',
@@ -37,15 +37,13 @@ module.exports = async (req, res) => {
       notification_url: `https://${req.headers.host}/api/webhook`,
     };
 
-    const payment = await mercadopago.payment.create(payment_data, {
-      headers: { 'X-Idempotency-Key': crypto.randomUUID() }
-    });
+    const result = await payment.create({ body: paymentData, requestOptions: { idempotencyKey: crypto.randomUUID() } });
 
     res.json({
-      id: payment.body.id,
-      status: payment.body.status,
-      qr_code: payment.body.point_of_interaction?.transaction_data?.qr_code,
-      qr_code_base64: payment.body.point_of_interaction?.transaction_data?.qr_code_base64,
+      id: result.id,
+      status: result.status,
+      qr_code: result.point_of_interaction?.transaction_data?.qr_code,
+      qr_code_base64: result.point_of_interaction?.transaction_data?.qr_code_base64,
       public_key: PUBLIC_KEY,
     });
 
