@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Checkout - SkalaPay</title>
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://sdk.mercadopago.com/js/v2"></script>
 
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -693,26 +694,12 @@
         </div>
       </div>
 
-      <!-- Área do QR Code PIX -->
+      <!-- Área do QR Code PIX com Wallet Brick -->
       <div id="pixQrArea" style="display:none; text-align:center; margin-top:20px; padding:20px; background:#fff; border-radius:16px; border:2px dashed var(--border-color);">
         <div style="font-size:18px; font-weight:800; color:var(--accent-color); margin-bottom:12px;">
           🎯 PAGUE COM PIX
         </div>
-        <div id="pixQrCode" style="margin:16px auto; max-width:260px;">
-          <!-- QR Code vai aqui -->
-        </div>
-        <div style="font-size:13px; color:var(--text-gray); font-weight:600; margin-bottom:8px;">
-          Escaneie o QR Code acima com o app do seu banco
-        </div>
-        <div style="font-size:12px; color:var(--text-gray); font-weight:600; margin-bottom:12px;">
-          Ou copie o código PIX abaixo:
-        </div>
-        <div style="display:flex; gap:8px; justify-content:center; align-items:center; flex-wrap:wrap;">
-          <input type="text" id="pixCode" readonly style="flex:1; min-width:200px; padding:12px 16px; border:2px solid #fff0f3; border-radius:12px; font-size:13px; font-weight:600; color:var(--text-main); background:#fcfdfe; text-align:center;">
-          <button onclick="copiarPix()" style="padding:12px 20px; background:var(--accent-color); color:white; border:none; border-radius:12px; font-weight:700; font-size:14px; cursor:pointer;">
-            Copiar 📋
-          </button>
-        </div>
+        <div id="walletBrick_container"></div>
         <div id="pixStatus" style="margin-top:16px; font-size:14px; font-weight:700; color:var(--text-gray);">
           ⏳ Aguardando pagamento...
         </div>
@@ -810,6 +797,8 @@
   })();
 
   // ===== CRIAR PAGAMENTO PIX =====
+  let mpInstance = null;
+
   document.getElementById('btnPay').addEventListener('click', async function() {
     const method = document.querySelector('.pay-btn.active')?.dataset.method;
     if (method !== 'pix') {
@@ -839,8 +828,24 @@
 
       const data = await response.json();
 
-      if (data.init_point) {
-        window.location.href = data.init_point;
+      if (data.preference_id) {
+        // Inicializa Mercado Pago com a Public Key
+        mpInstance = new MercadoPago(data.public_key, { locale: 'pt-BR' });
+
+        // Mostra a área do PIX
+        document.getElementById('pixQrArea').style.display = 'block';
+        document.getElementById('pixStatus').textContent = '⏳ Gerando QR Code...';
+
+        // Cria o Wallet Brick
+        const bricksBuilder = mpInstance.bricks();
+        bricksBuilder.create('wallet', 'walletBrick_container', {
+          initialization: {
+            preferenceId: data.preference_id
+          },
+          customization: {
+            texts: { value: 'Pagar com PIX', action: 'pay' }
+          }
+        });
       } else {
         alert('Erro ao gerar PIX. Tente novamente.');
       }
