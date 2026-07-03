@@ -839,27 +839,13 @@
 
       const data = await response.json();
 
-      if (data.qr_code_base64) {
-        // Mostrar QR Code
-        document.getElementById('pixQrCode').innerHTML = `<img src="data:image/png;base64,${data.qr_code_base64}" alt="QR Code PIX" style="width:100%; max-width:260px;">`;
-        document.getElementById('pixCode').value = data.qr_code || '';
-        document.getElementById('pixQrArea').style.display = 'block';
-        document.getElementById('pixStatus').textContent = '⏳ Aguardando pagamento...';
-        document.getElementById('pixStatus').style.color = 'var(--text-gray)';
-
-        currentPaymentId = data.id;
-
-        // Começar a monitorar o pagamento
-        if (pixCheckInterval) clearInterval(pixCheckInterval);
-        pixCheckInterval = setInterval(() => verificarPagamento(currentPaymentId), 5000);
-        // Copiar código PIX manual
-        document.getElementById('pixCode').value = data.qr_code;
-        document.getElementById('pixQrArea').style.display = 'block';
+      if (data.init_point) {
+        window.location.href = data.init_point;
       } else {
         alert('Erro ao gerar PIX. Tente novamente.');
       }
     } catch (error) {
-      alert('Erro de conexão com o servidor. Verifique se o backend está rodando.');
+      alert('Erro de conexão com o servidor. Tente novamente.');
       console.error(error);
     }
 
