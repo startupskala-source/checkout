@@ -693,6 +693,31 @@
         </div>
       </div>
 
+      <!-- Área do QR Code PIX -->
+      <div id="pixQrArea" style="display:none; text-align:center; margin-top:20px; padding:20px; background:#fff; border-radius:16px; border:2px dashed var(--border-color);">
+        <div style="font-size:18px; font-weight:800; color:var(--accent-color); margin-bottom:12px;">
+          🎯 PAGUE COM PIX
+        </div>
+        <div id="pixQrCode" style="margin:16px auto; max-width:260px;">
+          <!-- QR Code vai aqui -->
+        </div>
+        <div style="font-size:13px; color:var(--text-gray); font-weight:600; margin-bottom:8px;">
+          Escaneie o QR Code acima com o app do seu banco
+        </div>
+        <div style="font-size:12px; color:var(--text-gray); font-weight:600; margin-bottom:12px;">
+          Ou copie o código PIX abaixo:
+        </div>
+        <div style="display:flex; gap:8px; justify-content:center; align-items:center; flex-wrap:wrap;">
+          <input type="text" id="pixCode" readonly style="flex:1; min-width:200px; padding:12px 16px; border:2px solid #fff0f3; border-radius:12px; font-size:13px; font-weight:600; color:var(--text-main); background:#fcfdfe; text-align:center;">
+          <button onclick="copiarPix()" style="padding:12px 20px; background:var(--accent-color); color:white; border:none; border-radius:12px; font-weight:700; font-size:14px; cursor:pointer;">
+            Copiar 📋
+          </button>
+        </div>
+        <div id="pixStatus" style="margin-top:16px; font-size:14px; font-weight:700; color:var(--text-gray);">
+          ⏳ Aguardando pagamento...
+        </div>
+      </div>
+
       <button class="btn-submit" id="btnPay">Gerar meu PIX Seguro</button>
 
       <div class="form-footer">
@@ -740,23 +765,24 @@
 
 </body>
 <script>
+  // ===== CONFIGURAÇÃO =====
+  const API_URL = 'http://localhost:3000'; // Depois do deploy, trocar pela URL do Render
+
+  // ===== TIMER =====
   (function startTimer() {
     let time = 15 * 60;
     const timerEl = document.getElementById('countdownTimer');
-    
     const interval = setInterval(() => {
       const minutes = Math.floor(time / 60).toString().padStart(2, '0');
       const seconds = (time % 60).toString().padStart(2, '0');
-      
       timerEl.textContent = `${minutes}:${seconds}`;
-      
-      if(time > 0) {
-        time--;
-      } else {
-        clearInterval(interval);
-      }
+      if(time > 0) { time--; } else { clearInterval(interval); }
     }, 1000);
   })();
+
+  // ===== ALTERNAR PAGAMENTO =====
+  let currentPaymentId = null;
+  let pixCheckInterval = null;
 
   (function togglePayment() {
     const methods = document.querySelectorAll('.pay-btn');
@@ -769,6 +795,9 @@
         this.classList.add('active');
 
         const method = this.dataset.method;
+        document.getElementById('pixQrArea').style.display = 'none';
+        if (pixCheckInterval) { clearInterval(pixCheckInterval); pixCheckInterval = null; }
+
         if (method === 'pix') {
           installments.style.display = 'none';
           btn.textContent = 'Gerar meu PIX Seguro';
@@ -779,5 +808,96 @@
       });
     });
   })();
+
+  // ===== CRIAR PAGAMENTO PIX =====
+  document.getElementById('btnPay').addEventListener('click', async function() {
+    const method = document.querySelector('.pay-btn.active')?.dataset.method;
+    if (method !== 'pix') {
+      alert('Cartão de crédito em breve! Por enquanto, selecione PIX.');
+      return;
+    }
+
+    const nome = document.querySelector('.form-control').value.trim();
+    const email = document.querySelector('input[type="email"]').value.trim();
+    const cpf = document.querySelector('input[placeholder="Apenas números"]').value.trim();
+    const telInput = document.querySelector('input[type="tel"]').value.trim();
+
+    if (!nome || !email || !cpf || !telInput) {
+      alert('Preencha todos os dados antes de continuar!');
+      return;
+    }
+
+    this.disabled = true;
+    this.textContent = 'Gerando PIX...';
+
+    try {
+      const response = await fetch(`${API_URL}/api/create_payment`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nome, email, cpf, telefone: telInput })
+      });
+
+      const data = await response.json();
+
+      if (data.qr_code_base64) {
+        // Mostrar QR Code
+        document.getElementById('pixQrCode').innerHTML = `<img src="data:image/png;base64,${data.qr_code_base64}" alt="QR Code PIX" style="width:100%; max-width:260px;">`;
+        document.getElementById('pixCode').value = data.qr_code || '';
+        document.getElementById('pixQrArea').style.display = 'block';
+        document.getElementById('pixStatus').textContent = '⏳ Aguardando pagamento...';
+        document.getElementById('pixStatus').style.color = 'var(--text-gray)';
+
+        currentPaymentId = data.id;
+
+        // Começar a monitorar o pagamento
+        if (pixCheckInterval) clearInterval(pixCheckInterval);
+        pixCheckInterval = setInterval(() => verificarPagamento(currentPaymentId), 5000);
+      } else if (data.qr_code) {
+        // Copiar código PIX manual
+        document.getElementById('pixCode').value = data.qr_code;
+        document.getElementById('pixQrArea').style.display = 'block';
+      } else {
+        alert('Erro ao gerar PIX. Tente novamente.');
+      }
+    } catch (error) {
+      alert('Erro de conexão com o servidor. Verifique se o backend está rodando.');
+      console.error(error);
+    }
+
+    this.disabled = false;
+    this.textContent = 'Gerar meu PIX Seguro';
+  });
+
+  // ===== VERIFICAR STATUS DO PAGAMENTO =====
+  async function verificarPagamento(paymentId) {
+    try {
+      const response = await fetch(`${API_URL}/api/check_payment/${paymentId}`);
+      const data = await response.json();
+
+      if (data.status === 'approved') {
+        document.getElementById('pixStatus').textContent = '✅ PAGAMENTO CONFIRMADO! Redirecionando...';
+        document.getElementById('pixStatus').style.color = '#1eb95a';
+        if (pixCheckInterval) clearInterval(pixCheckInterval);
+
+        setTimeout(() => {
+          window.location.href = 'obrigado.html';
+        }, 2000);
+      } else if (data.status === 'rejected' || data.status === 'cancelled') {
+        document.getElementById('pixStatus').textContent = '❌ Pagamento não confirmado. Tente novamente.';
+        document.getElementById('pixStatus').style.color = '#d40000';
+        if (pixCheckInterval) clearInterval(pixCheckInterval);
+      }
+    } catch (error) {
+      console.error('Erro ao verificar pagamento:', error);
+    }
+  }
+
+  // ===== COPIAR CÓDIGO PIX =====
+  function copiarPix() {
+    const pixInput = document.getElementById('pixCode');
+    pixInput.select();
+    document.execCommand('copy');
+    alert('Código PIX copiado! Cole no seu banco para pagar.');
+  }
 </script>
 </html>
