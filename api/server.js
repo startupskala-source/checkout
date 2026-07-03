@@ -3,10 +3,12 @@ const mercadopago = require('mercadopago');
 const cors = require('cors');
 const crypto = require('crypto');
 
+const path = require('path');
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Credenciais Mercado Pago
+// Credenciais Mercado Pago (via variáveis de ambiente no Render)
 const ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN || 'APP_USR-979073945795476-070311-4cd395c11c1ab047cd245ea48590fbea-3250900151';
 const PUBLIC_KEY = process.env.MP_PUBLIC_KEY || 'APP_USR-a2fcf06f-d6a6-4ea0-8ea1-079cc2dfad20';
 
@@ -16,8 +18,8 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Servir arquivos estáticos da pasta atual
-app.use(express.static(__dirname));
+// Servir arquivos estáticos (index.html da raiz)
+app.use(express.static(path.join(__dirname, '..')));
 
 // Endpoint para criar pagamento PIX
 app.post('/api/create_payment', async (req, res) => {
