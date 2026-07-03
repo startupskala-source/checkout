@@ -1,4 +1,3 @@
-const { MercadoPagoConfig, Payment } = require('mercadopago');
 const crypto = require('crypto');
 
 module.exports = async (req, res) => {
@@ -17,10 +16,8 @@ module.exports = async (req, res) => {
       return res.status(500).json({ error: 'ACCESS_TOKEN não configurado' });
     }
 
-    const client = new MercadoPagoConfig({ accessToken: ACCESS_TOKEN });
-    const payment = new Payment(client);
-
     const { nome, email, cpf } = req.body;
+    const idempotencyKey = crypto.randomUUID();
 
     const paymentData = {
       transaction_amount: 20.89,
@@ -33,11 +30,25 @@ module.exports = async (req, res) => {
           type: 'CPF',
           number: cpf || '00000000000'
         }
-      },
-      notification_url: `https://${req.headers.host}/api/webhook`,
+      }
     };
 
-    const result = await payment.create({ body: paymentData, requestOptions: { idempotencyKey: crypto.randomUUID() } });
+    const response = await fetch('https://api.mercadopago.com/v1/payments', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${ACCESS_TOKEN}`,
+        'Content-Type': 'application/json',
+        'X-Idempotency-Key': idempotencyKey
+      },
+      body: JSON.stringify(paymentData)
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      console.error('MP API Error:', result);
+      return res.status(response.status).json({ error: result.message || 'Erro na API do Mercado Pago' });
+    }
 
     res.json({
       id: result.id,
