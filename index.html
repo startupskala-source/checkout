@@ -766,7 +766,7 @@
 </body>
 <script>
   // ===== CONFIGURAÇÃO =====
-  const API_URL = ''; // Vazio = mesma origem (funciona no Render)
+  const API_URL = 'https://checkout-skala2.vercel.app';
 
   // ===== TIMER =====
   (function startTimer() {
@@ -852,7 +852,6 @@
         // Começar a monitorar o pagamento
         if (pixCheckInterval) clearInterval(pixCheckInterval);
         pixCheckInterval = setInterval(() => verificarPagamento(currentPaymentId), 5000);
-      } else if (data.qr_code) {
         // Copiar código PIX manual
         document.getElementById('pixCode').value = data.qr_code;
         document.getElementById('pixQrArea').style.display = 'block';
@@ -871,7 +870,7 @@
   // ===== VERIFICAR STATUS DO PAGAMENTO =====
   async function verificarPagamento(paymentId) {
     try {
-      const response = await fetch(`${API_URL}/api/check_payment/${paymentId}`);
+      const response = await fetch(`${API_URL}/api/check_payment?id=${paymentId}`);
       const data = await response.json();
 
       if (data.status === 'approved') {
