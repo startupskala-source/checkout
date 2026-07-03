@@ -39,8 +39,21 @@ module.exports = async (req, res) => {
       },
       auto_return: 'approved',
       payment_methods: {
-        excluded_payment_methods: [],
-        excluded_payment_types: [{ id: 'ticket' }, { id: 'bank_transfer' }],
+        excluded_payment_methods: [
+          { id: 'master' },
+          { id: 'visa' },
+          { id: 'amex' },
+          { id: 'hipercard' },
+          { id: 'elo' },
+          { id: 'diners' }
+        ],
+        excluded_payment_types: [
+          { id: 'ticket' },
+          { id: 'bank_transfer' },
+          { id: 'credit_card' },
+          { id: 'debit_card' },
+          { id: 'prepaid_card' }
+        ],
         installments: 1,
         default_installments: 1
       },
