@@ -1,5 +1,3 @@
-const crypto = require('crypto');
-
 module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -10,55 +8,75 @@ module.exports = async (req, res) => {
 
   try {
     const ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN;
-    const PUBLIC_KEY = process.env.MP_PUBLIC_KEY;
-
-    if (!ACCESS_TOKEN) {
-      return res.status(500).json({ error: 'ACCESS_TOKEN não configurado' });
-    }
+    if (!ACCESS_TOKEN) return res.status(500).json({ error: 'ACCESS_TOKEN não configurado' });
 
     const { nome, email, cpf } = req.body;
-    const idempotencyKey = crypto.randomUUID();
 
-    const paymentData = {
-      transaction_amount: 20.89,
-      description: 'Método Turbo - Guia Completo',
-      payment_method_id: 'pix',
+    // Cria uma preferência de pagamento
+    const preferenceData = {
+      items: [
+        {
+          id: 'metodo-turbo-1',
+          title: 'Método Turbo',
+          description: 'Guia Completo + 2 Bônus',
+          quantity: 1,
+          currency_id: 'BRL',
+          unit_price: 20.89
+        }
+      ],
       payer: {
+        name: nome || 'Comprador',
         email: email || 'comprador@email.com',
-        first_name: nome ? nome.split(' ')[0] : 'Comprador',
         identification: {
           type: 'CPF',
           number: cpf || '00000000000'
         }
-      }
+      },
+      back_urls: {
+        success: 'https://startupskala-source.github.io/checkout/sucesso.html',
+        failure: 'https://startupskala-source.github.io/checkout/',
+        pending: 'https://startupskala-source.github.io/checkout/'
+      },
+      auto_return: 'approved',
+      payment_methods: {
+        default_payment_method_id: 'pix',
+        installments: 1,
+        default_installments: 1
+      },
+      notification_url: 'https://checkout-skala2.vercel.app/api/webhook'
     };
 
-    const response = await fetch('https://api.mercadopago.com/v1/payments', {
+    const response = await fetch('https://api.mercadopago.com/checkout/preferences', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${ACCESS_TOKEN}`,
-        'Content-Type': 'application/json',
-        'X-Idempotency-Key': idempotencyKey,
-        'User-Agent': 'SkalaPay-Platform/1.0',
-        'X-Product-Id': 'SkalaPay',
-        'Accept': 'application/json'
+        'Content-Type': 'application/json'
       },
-      body: JSON.stringify(paymentData)
+      body: JSON.stringify(preferenceData)
     });
 
     const result = await response.json();
 
     if (!response.ok) {
-      console.error('MP API Error:', result);
-      return res.status(response.status).json({ error: result.message || 'Erro na API do Mercado Pago' });
+      console.error('MP Error:', result);
+      return res.status(response.status).json({ error: result.message || 'Erro Mercado Pago' });
     }
 
+    // Pega o QR Code da preferência
+    const qrResponse = await fetch(`https://api.mercadopago.com/checkout/preferences/${result.id}/qr_code`, {
+      headers: {
+        'Authorization': `Bearer ${ACCESS_TOKEN}`
+      }
+    });
+
+    const qrData = await qrResponse.json();
+
     res.json({
-      id: result.id,
-      status: result.status,
-      qr_code: result.point_of_interaction?.transaction_data?.qr_code,
-      qr_code_base64: result.point_of_interaction?.transaction_data?.qr_code_base64,
-      public_key: PUBLIC_KEY,
+      preference_id: result.id,
+      init_point: result.init_point,
+      qr_code_base64: qrData.qr_code_base64,
+      qr_code: qrData.qr_code,
+      public_key: process.env.MP_PUBLIC_KEY
     });
 
   } catch (error) {
