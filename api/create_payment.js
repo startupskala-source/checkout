@@ -38,7 +38,10 @@ module.exports = async (req, res) => {
       headers: {
         'Authorization': `Bearer ${ACCESS_TOKEN}`,
         'Content-Type': 'application/json',
-        'X-Idempotency-Key': idempotencyKey
+        'X-Idempotency-Key': idempotencyKey,
+        'User-Agent': 'SkalaPay-Platform/1.0',
+        'X-Product-Id': 'SkalaPay',
+        'Accept': 'application/json'
       },
       body: JSON.stringify(paymentData)
     });
