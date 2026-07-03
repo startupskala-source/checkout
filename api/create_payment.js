@@ -14,85 +14,47 @@ module.exports = async (req, res) => {
 
     const { nome, email, cpf } = req.body;
 
-    // Cria pagamento PIX direto
-    const paymentData = {
-      transaction_amount: 20.89,
-      description: 'Método Turbo - Guia Completo',
-      payment_method_id: 'pix',
-      payer: {
-        email: email || 'comprador@email.com',
-        first_name: nome ? nome.split(' ')[0] : 'Comprador',
-        last_name: nome ? nome.split(' ').slice(1).join(' ') || 'Skala' : 'Skala',
-        identification: {
-          type: 'CPF',
-          number: cpf || '00000000000'
-        }
-      }
-    };
-
-    const response = await fetch('https://api.mercadopago.com/v1/payments', {
+    // Cria preferência com purpose = wallet_purchase
+    // Isso faz o Wallet Brick mostrar só PIX
+    const prefResponse = await fetch('https://api.mercadopago.com/checkout/preferences', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${ACCESS_TOKEN}`,
-        'Content-Type': 'application/json',
-        'X-Idempotency-Key': crypto.randomUUID(),
-        'User-Agent': 'Mozilla/5.0 (compatible; SkalaPay/1.0)',
-        'Accept': 'application/json'
+        'Content-Type': 'application/json'
       },
-      body: JSON.stringify(paymentData)
+      body: JSON.stringify({
+        items: [{
+          id: 'metodo-turbo-1',
+          title: 'Método Turbo',
+          description: 'Guia Completo + 2 Bônus',
+          quantity: 1,
+          currency_id: 'BRL',
+          unit_price: 20.89
+        }],
+        payer: {
+          name: nome || 'Comprador',
+          email: email || 'comprador@email.com',
+          identification: { type: 'CPF', number: cpf || '00000000000' }
+        },
+        purpose: 'wallet_purchase',
+        auto_return: 'approved',
+        back_urls: {
+          success: 'https://startupskala-source.github.io/checkout/',
+          failure: 'https://startupskala-source.github.io/checkout/',
+          pending: 'https://startupskala-source.github.io/checkout/'
+        }
+      })
     });
 
-    const result = await response.json();
+    const pref = await prefResponse.json();
 
-    if (!response.ok) {
-      // Fallback: redireciona pro checkout do Mercado Pago
-      // usando o link sandbox que força PIX
-      const pixLink = `https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=preference&purpose=wallet_purchase`;
-      const prefResponse = await fetch('https://api.mercadopago.com/checkout/preferences', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${ACCESS_TOKEN}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          items: [{
-            id: 'metodo-turbo-1',
-            title: 'Método Turbo',
-            description: 'Guia Completo + 2 Bônus',
-            quantity: 1,
-            currency_id: 'BRL',
-            unit_price: 20.89
-          }],
-          payer: {
-            name: nome || 'Comprador',
-            email: email || 'comprador@email.com',
-            identification: { type: 'CPF', number: cpf || '00000000000' }
-          },
-          purpose: 'wallet_purchase',
-          auto_return: 'approved',
-          back_urls: {
-            success: 'https://startupskala-source.github.io/checkout/',
-            failure: 'https://startupskala-source.github.io/checkout/',
-            pending: 'https://startupskala-source.github.io/checkout/'
-          }
-        })
-      });
-      const pref = await prefResponse.json();
-      return res.json({
-        init_point: pref.init_point,
-        preference_id: pref.id,
-        public_key: process.env.MP_PUBLIC_KEY
-      });
+    if (!prefResponse.ok) {
+      return res.status(500).json({ error: pref.message || 'Erro ao criar preferência' });
     }
 
-    // Pagamento PIX criado com sucesso!
-    const qr = result.point_of_interaction?.transaction_data;
     res.json({
-      id: result.id,
-      status: result.status,
-      qr_code: qr?.qr_code,
-      qr_code_base64: qr?.qr_code_base64,
-      copia_cola: qr?.qr_code,
+      preference_id: pref.id,
+      init_point: pref.init_point,
       public_key: process.env.MP_PUBLIC_KEY
     });
 

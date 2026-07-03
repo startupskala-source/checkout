@@ -797,8 +797,6 @@
   })();
 
   // ===== CRIAR PAGAMENTO PIX =====
-  let mpInstance = null;
-
   document.getElementById('btnPay').addEventListener('click', async function() {
     const method = document.querySelector('.pay-btn.active')?.dataset.method;
     if (method !== 'pix') {
@@ -829,21 +827,20 @@
       const data = await response.json();
 
       if (data.preference_id) {
-        // Inicializa Mercado Pago com a Public Key
-        mpInstance = new MercadoPago(data.public_key, { locale: 'pt-BR' });
+        // Inicializa Mercado Pago
+        const mp = new MercadoPago(data.public_key, { locale: 'pt-BR' });
 
         // Mostra a área do PIX
         document.getElementById('pixQrArea').style.display = 'block';
-        document.getElementById('pixStatus').textContent = '⏳ Gerando QR Code...';
+        document.getElementById('pixStatus').textContent = '🔄 Escaneie o QR Code ou pague pelo app do seu banco';
+        document.getElementById('walletBrick_container').innerHTML = '';
 
-        // Cria o Wallet Brick
-        const bricksBuilder = mpInstance.bricks();
-        bricksBuilder.create('wallet', 'walletBrick_container', {
-          initialization: {
-            preferenceId: data.preference_id
-          },
+        // Wallet Brick que mostra o QR Code PIX
+        mp.bricks().create('wallet', 'walletBrick_container', {
+          initialization: { preferenceId: data.preference_id },
           customization: {
-            texts: { value: 'Pagar com PIX', action: 'pay' }
+            visual: { buttonHeight: 0 },
+            texts: { action: 'pay', value: 'Pagar com PIX' }
           }
         });
       } else {
