@@ -1,0 +1,16 @@
+{
+  "functions": {
+    "api/create_payment.js": {
+      "memory": 128,
+      "maxDuration": 10
+    },
+    "api/check_payment.js": {
+      "memory": 128,
+      "maxDuration": 10
+    },
+    "api/webhook.js": {
+      "memory": 128,
+      "maxDuration": 10
+    }
+  }
+}

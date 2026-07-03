@@ -1,15 +1,8 @@
 {
-  "name": "checkout-skala-api",
+  "name": "checkout-skala",
   "version": "1.0.0",
-  "description": "API Mercado Pago para checkout SkalaPay",
-  "main": "api/server.js",
-  "scripts": {
-    "start": "node api/server.js",
-    "dev": "node api/server.js"
-  },
+  "description": "Checkout SkalaPay com Mercado Pago",
   "dependencies": {
-    "cors": "^2.8.5",
-    "express": "^4.21.0",
     "mercadopago": "^2.0.0"
   }
 }

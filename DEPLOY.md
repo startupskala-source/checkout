@@ -1,38 +1,29 @@
-# 🚀 DEPLOY NO RENDER
+# 🚀 DEPLOY NA VERCEL (100% GRÁTIS)
 
-## 1. Acesse o Render
-- Vá em https://dashboard.render.com/
-- Clique em **"New +"** > **"Blueprint"**
+## 1. Acesse a Vercel
+- Vá em https://vercel.com/
+- Faça login com seu **GitHub**
 
-## 2. Conecte o GitHub
-- Escolha seu repositório: `startupskala-source/checkout`
-- O Render vai ler automaticamente o arquivo `render.yaml`
-- Clique em **"Apply"**
+## 2. Importe o repositório
+- Clique em **"Add New..."** > **"Project"**
+- Escolha: `startupskala-source/checkout`
+- Clique em **"Import"**
 
-## 3. Pronto! ⏳
-- O Render vai instalar as dependências e fazer o deploy automático
-- Em 2-3 minutos seu site estará no ar em:
+## 3. Configure as variáveis de ambiente
+- Clique em **"Environment Variables"**
+- Adicione:
   ```
-  https://checkout-skala.onrender.com
+  MP_ACCESS_TOKEN = APP_USR-979073945795476-070311-4cd395c11c1ab047cd245ea48590fbea-3250900151
+  MP_PUBLIC_KEY = APP_USR-a2fcf06f-d6a6-4ea0-8ea1-079cc2dfad20
   ```
 
-## 4. Atualizar o GitHub Pages (opcional)
-O GitHub Pages continua em:
+## 4. Deploy 🚀
+- Clique em **"Deploy"**
+- Em 1-2 minutos seu checkout estará no ar:
   ```
-  https://startupskala-source.github.io/checkout/
+  https://checkout.vercel.app
   ```
-Mas a versão com PIX funcionando é a do Render:
-  ```
-  https://checkout-skala.onrender.com
-  ```
-(Ambas mostram o mesmo checkout, mas o Render tem o backend PIX)
+  (o nome pode variar)
 
----
-
-## Testar local (se quiser)
-```bash
-cd /c/Users/Sidinei/projetos/checkout-skala-source
-npm install
-npm start
-```
-Abre em `http://localhost:3000`
+## Pronto!
+Acesse o link gerado pela Vercel — o PIX vai funcionar direto, sem precisar pagar nada.
