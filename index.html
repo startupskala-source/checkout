@@ -835,12 +835,21 @@
         document.getElementById('pixStatus').textContent = '🔄 Escaneie o QR Code ou pague pelo app do seu banco';
         document.getElementById('walletBrick_container').innerHTML = '';
 
-        // Wallet Brick que mostra o QR Code PIX
-        mp.bricks().create('wallet', 'walletBrick_container', {
-          initialization: { preferenceId: data.preference_id },
+        // Payment Brick - mostra QR Code PIX na pagina
+        mp.bricks().create('payment', 'walletBrick_container', {
+          initialization: {
+            preferenceId: data.preference_id,
+            payer: { email: email }
+          },
           customization: {
-            visual: { buttonHeight: 0 },
-            texts: { action: 'pay', value: 'Pagar com PIX' }
+            paymentMethods: {
+              maxInstallments: 1,
+              types: { included: ['pix'] }
+            }
+          },
+          callbacks: {
+            onReady: () => {},
+            onError: (error) => console.error(error)
           }
         });
       } else {
