@@ -39,7 +39,8 @@ module.exports = async (req, res) => {
       },
       auto_return: 'approved',
       payment_methods: {
-        default_payment_method_id: 'pix',
+        excluded_payment_methods: [],
+        excluded_payment_types: [{ id: 'ticket' }, { id: 'bank_transfer' }],
         installments: 1,
         default_installments: 1
       },
