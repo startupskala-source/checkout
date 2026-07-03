@@ -14,47 +14,78 @@ module.exports = async (req, res) => {
 
     const { nome, email, cpf } = req.body;
 
-    // Cria preferência com purpose = wallet_purchase
-    // Isso faz o Wallet Brick mostrar só PIX
-    const prefResponse = await fetch('https://api.mercadopago.com/checkout/preferences', {
+    // Cria pagamento PIX direto
+    const paymentData = {
+      transaction_amount: 20.89,
+      description: 'Método Turbo - Guia Completo',
+      payment_method_id: 'pix',
+      payer: {
+        email: email || 'comprador@email.com',
+        first_name: nome ? nome.split(' ')[0] : 'Comprador',
+        identification: { type: 'CPF', number: cpf || '00000000000' }
+      }
+    };
+
+    const response = await fetch('https://api.mercadopago.com/v1/payments', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${ACCESS_TOKEN}`,
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'X-Idempotency-Key': crypto.randomUUID(),
+        'X-Forwarded-For': '177.54.22.0',
+        'Accept': 'application/json'
       },
-      body: JSON.stringify({
-        items: [{
-          id: 'metodo-turbo-1',
-          title: 'Método Turbo',
-          description: 'Guia Completo + 2 Bônus',
-          quantity: 1,
-          currency_id: 'BRL',
-          unit_price: 20.89
-        }],
-        payer: {
-          name: nome || 'Comprador',
-          email: email || 'comprador@email.com',
-          identification: { type: 'CPF', number: cpf || '00000000000' }
-        },
-        purpose: 'wallet_purchase',
-        auto_return: 'approved',
-        back_urls: {
-          success: 'https://startupskala-source.github.io/checkout/',
-          failure: 'https://startupskala-source.github.io/checkout/',
-          pending: 'https://startupskala-source.github.io/checkout/'
-        }
-      })
+      body: JSON.stringify(paymentData)
     });
 
-    const pref = await prefResponse.json();
+    const result = await response.json();
 
-    if (!prefResponse.ok) {
-      return res.status(500).json({ error: pref.message || 'Erro ao criar preferência' });
+    if (!response.ok) {
+      // Fallback: cria preferência e devolve o init_point
+      const prefResponse = await fetch('https://api.mercadopago.com/checkout/preferences', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${ACCESS_TOKEN}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          items: [{
+            id: 'metodo-turbo-1',
+            title: 'Método Turbo',
+            description: 'Guia Completo + 2 Bônus',
+            quantity: 1,
+            currency_id: 'BRL',
+            unit_price: 20.89
+          }],
+          payer: {
+            name: nome || 'Comprador',
+            email: email || 'comprador@email.com',
+            identification: { type: 'CPF', number: cpf || '00000000000' }
+          },
+          purpose: 'wallet_purchase',
+          auto_return: 'approved',
+          back_urls: {
+            success: 'https://startupskala-source.github.io/checkout/',
+            failure: 'https://startupskala-source.github.io/checkout/',
+            pending: 'https://startupskala-source.github.io/checkout/'
+          }
+        })
+      });
+      const pref = await prefResponse.json();
+      return res.json({
+        preference_id: pref.id,
+        init_point: pref.init_point,
+        public_key: process.env.MP_PUBLIC_KEY
+      });
     }
 
+    // Pagamento PIX criado com sucesso!
+    const qr = result.point_of_interaction?.transaction_data;
     res.json({
-      preference_id: pref.id,
-      init_point: pref.init_point,
+      id: result.id,
+      status: result.status,
+      qr_code: qr?.qr_code,
+      qr_code_base64: qr?.qr_code_base64,
       public_key: process.env.MP_PUBLIC_KEY
     });
 
